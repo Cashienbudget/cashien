@@ -308,32 +308,26 @@ function submitWaitlist() {
 
   const firstName = document.getElementById('first-name').value.trim();
 
-  fetch('https://api.beehiiv.com/v2/publications/pub_3a5cfd67-2c37-4585-81bc-f1b21b59ee1c/subscriptions', {
+  // Use Beehiiv's embed endpoint which supports browser CORS
+  const formData = new FormData();
+  formData.append('email', email);
+  if (firstName) formData.append('first_name', firstName);
+  formData.append('utm_source', 'cashien_waitlist');
+  formData.append('utm_medium', 'organic');
+
+  fetch('https://embeds.beehiiv.com/pub_3a5cfd67-2c37-4585-81bc-f1b21b59ee1c/subscribe', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      email: email,
-      first_name: firstName || undefined,
-      reactivate_existing: true,
-      send_welcome_email: true,
-      utm_source: 'cashien_waitlist',
-      utm_medium: 'organic',
-    })
+    mode: 'no-cors',
+    body: formData
   })
-  .then(res => {
-    // Beehiiv returns 200 or 201 on success
-    if (res.ok || res.status === 201) {
-      document.getElementById('signup-card').style.display = 'none';
-      document.getElementById('success-card').style.display = 'block';
-      localStorage.setItem('cashien_joined', '1');
-    } else {
-      return res.json().then(data => { throw new Error(data.message || 'Signup failed'); });
-    }
+  .then(() => {
+    document.getElementById('signup-card').style.display = 'none';
+    document.getElementById('success-card').style.display = 'block';
+    localStorage.setItem('cashien_joined', '1');
   })
   .catch(err => {
-    // Fallback — show success anyway so user isn't blocked,
-    // and log the error for debugging
-    console.error('Beehiiv error:', err);
+    console.error('Signup error:', err);
+    // Show success anyway so user experience isn't broken
     document.getElementById('signup-card').style.display = 'none';
     document.getElementById('success-card').style.display = 'block';
     localStorage.setItem('cashien_joined', '1');
