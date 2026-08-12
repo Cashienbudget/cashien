@@ -3,12 +3,27 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { email, first_name } = req.body;
+  const { email, first_name, turnstile_token } = req.body;
 
-  if (!email) {
-    return res.status(400).json({ error: 'Email required' });
+  if (!email) return res.status(400).json({ error: 'Email required' });
+
+  // Verify Cloudflare Turnstile token
+  if (turnstile_token) {
+    const verify = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        secret: process.env.TURNSTILE_SECRET_KEY,
+        response: turnstile_token,
+      })
+    });
+    const result = await verify.json();
+    if (!result.success) {
+      return res.status(403).json({ error: 'Bot verification failed' });
+    }
   }
 
+  // Submit to Beehiiv
   try {
     const response = await fetch(
       'https://api.beehiiv.com/v2/publications/pub_3a5cfd67-2c37-4585-81bc-f1b21b59ee1c/subscriptions',
