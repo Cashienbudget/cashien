@@ -84,6 +84,7 @@ nav { display: flex; align-items: center; justify-content: center; padding: 1.75
 .fade-4 { animation: fadeUp 0.5s 0.3s ease both; }
 .fade-5 { animation: fadeUp 0.5s 0.4s ease both; }
 </style>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
 <body>
 <div class="bg-glow"></div>
@@ -115,6 +116,7 @@ nav { display: flex; align-items: center; justify-content: center; padding: 1.75
       <input class="name-input" id="first-name" type="text" placeholder="First name" autocomplete="given-name">
       <input class="name-input" id="last-name" type="text" placeholder="Last name (optional)" autocomplete="family-name">
     </div>
+    <div class="cf-turnstile" data-sitekey="0x4AAAAAAEObgz5pa2-wlJkG" data-theme="dark" style="margin-bottom:10px;"></div>
     <div class="input-row">
       <input class="email-input" id="email-input" type="email" placeholder="your@email.com" autocomplete="email" onkeydown="if(event.key==='Enter')submitWaitlist()">
       <button class="submit-btn" id="submit-btn" onclick="submitWaitlist()">Join waitlist</button>
@@ -278,17 +280,22 @@ function submitWaitlist() {
     setTimeout(() => { inp.style.borderColor = ''; inp.placeholder = 'your@email.com'; }, 2500);
     return;
   }
+
+  const token = document.querySelector('[name="cf-turnstile-response"]')?.value;
+  if (!token) {
+    alert('Please wait for the security check to complete.');
+    return;
+  }
+
   const btn = document.getElementById('submit-btn');
   btn.disabled = true;
   btn.textContent = 'Joining...';
-
   const firstName = document.getElementById('first-name').value.trim();
 
-  // POST to our Vercel serverless proxy at /api/subscribe
   fetch('/api/subscribe', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, first_name: firstName || undefined })
+    body: JSON.stringify({ email, first_name: firstName || undefined, turnstile_token: token })
   })
   .then(res => res.json())
   .then(data => {
@@ -296,13 +303,10 @@ function submitWaitlist() {
       document.getElementById('signup-card').style.display = 'none';
       document.getElementById('success-card').style.display = 'block';
       localStorage.setItem('cashien_joined', '1');
-    } else {
-      throw new Error(data.error || 'Signup failed');
-    }
+    } else { throw new Error(data.error || 'Signup failed'); }
   })
   .catch(err => {
     console.error('Signup error:', err);
-    // Show success anyway so user experience is not broken
     document.getElementById('signup-card').style.display = 'none';
     document.getElementById('success-card').style.display = 'block';
     localStorage.setItem('cashien_joined', '1');
